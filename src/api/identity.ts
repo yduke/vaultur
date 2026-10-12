@@ -710,8 +710,26 @@ async function prelogin(c: Context<AppEnv>) {
 		kdfParallelism: user?.clientKdfParallelism ?? null
 	})
 }
+
+async function preloginPassword(c: Context<AppEnv>) {
+	const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>
+	const email = String(ci(body, "email") ?? "")
+	const db = c.get("db")
+	const user = email ? await findUserByEmail(db, email) : undefined
+
+	return c.json({
+		KdfSettings: {
+			KdfType: user?.clientKdfType ?? KdfType.Pbkdf2,
+			Iterations: user?.clientKdfIter ?? 600_000,
+			Memory: user?.clientKdfMemory ?? null,
+			Parallelism: user?.clientKdfParallelism ?? null
+		},
+		Salt: user?.email ?? email
+	})
+}
+
 identityRoutes.post("/accounts/prelogin", prelogin)
-identityRoutes.post("/accounts/prelogin/password", prelogin)
+identityRoutes.post("/accounts/prelogin/password", preloginPassword)
 
 interface RegisterVerifyClaims {
 	sub: string

@@ -23,18 +23,30 @@ describe("additional API surface", () => {
 
 	it("answers /api/accounts/prelogin and /identity/accounts/prelogin/password", async () => {
 		await registerUser()
-		for (const url of [
-			"https://vault.test/api/accounts/prelogin",
-			"https://vault.test/identity/accounts/prelogin/password"
-		]) {
-			const res = await SELF.fetch(url, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ email: TEST_USER.email })
-			})
-			expect(res.status).toBe(200)
-			expect(((await res.json()) as Record<string, any>).kdfIterations).toBe(600_000)
-		}
+
+		const legacyRes = await SELF.fetch("https://vault.test/api/accounts/prelogin", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ email: TEST_USER.email })
+		})
+		expect(legacyRes.status).toBe(200)
+		const legacyBody = (await legacyRes.json()) as Record<string, any>
+		expect(legacyBody.kdfIterations).toBe(600_000)
+
+		const passwordRes = await SELF.fetch("https://vault.test/identity/accounts/prelogin/password", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ email: TEST_USER.email })
+		})
+		expect(passwordRes.status).toBe(200)
+		const passwordBody = (await passwordRes.json()) as Record<string, any>
+		expect(passwordBody.KdfSettings).toEqual({
+			KdfType: 0,
+			Iterations: 600_000,
+			Memory: null,
+			Parallelism: null
+		})
+		expect(passwordBody.Salt).toBe(TEST_USER.email)
 	})
 
 	it("returns device-verification-settings and auth-requests/pending", async () => {
