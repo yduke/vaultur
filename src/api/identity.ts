@@ -717,12 +717,24 @@ async function preloginPassword(c: Context<AppEnv>) {
 	const db = c.get("db")
 	const user = email ? await findUserByEmail(db, email) : undefined
 
+	const kdf = user?.clientKdfType ?? KdfType.Pbkdf2
+	const kdfIterations = user?.clientKdfIter ?? 600_000
+	const kdfMemory = user?.clientKdfMemory ?? null
+	const kdfParallelism = user?.clientKdfParallelism ?? null
+
 	return c.json({
+		// Web Vault
+		kdf,
+		kdfIterations,
+		kdfMemory,
+		kdfParallelism,
+
+		// Chrome addon
 		KdfSettings: {
-			KdfType: user?.clientKdfType ?? KdfType.Pbkdf2,
-			Iterations: user?.clientKdfIter ?? 600_000,
-			Memory: user?.clientKdfMemory ?? null,
-			Parallelism: user?.clientKdfParallelism ?? null
+			KdfType: kdf,
+			Iterations: kdfIterations,
+			Memory: kdfMemory,
+			Parallelism: kdfParallelism
 		},
 		Salt: user?.email ?? email
 	})
